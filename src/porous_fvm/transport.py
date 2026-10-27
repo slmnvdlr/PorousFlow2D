@@ -400,7 +400,7 @@ def _fractional_flow_derivative_scalar(
 
 if njit is not None:
 
-    @njit(cache=True)
+    @njit(cache=False)
     def _numba_fractional_flow(
         saturation,
         swc,
@@ -418,7 +418,7 @@ if njit is not None:
         total = water_mobility + oil_mobility
         return water_mobility / total if total > 0.0 else 0.0
 
-    @njit(cache=True)
+    @njit(cache=False)
     def _numba_fractional_flow_derivative(
         saturation,
         swc,
@@ -476,7 +476,7 @@ if njit is not None:
             / mobile_interval
         )
 
-    @njit(cache=True)
+    @njit(cache=False)
     def _numba_solve_ordered_cell(
         old_saturation,
         storage,
@@ -569,7 +569,7 @@ if njit is not None:
                 right = value
         return 0.5 * (left + right), 72, 0
 
-    @njit(cache=True)
+    @njit(cache=False)
     def _numba_ordered_sweep(
         old,
         pore_volume,
