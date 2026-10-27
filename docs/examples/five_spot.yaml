@@ -1,0 +1,120 @@
+schema_version: 1
+
+project:
+  name: five_spot_demo
+  description: Базовая ячейка пятиточечной системы
+  unit_system: SI
+
+geometry:
+  type: five_spot_cell
+  size_m: [100.0, 100.0]
+  thickness_m: 10.0
+  wells:
+    - id: injector
+      corner: bottom_left
+      radius_m: 0.10
+      boundary_tag: well_injector
+    - id: producer
+      corner: top_right
+      radius_m: 0.10
+      boundary_tag: well_producer
+
+mesh:
+  generator: body_fitted_structured
+  cells:
+    along_streamline: 120
+    across_streamlines: 80
+  pilot_cells:
+    along_streamline: 36
+    across_streamlines: 28
+  pressure_bias: 1.0
+  pressure_spacing:
+    type: double_geometric
+    injector_ratio: 1.06
+    producer_ratio: 1.06
+  streamline_spacing: equal_flux
+  smoothing:
+    enabled: true
+    iterations: 80
+  quality_limits:
+    min_angle_deg: 15.0
+    max_nonorthogonality_deg: 75.0
+
+medium:
+  permeability:
+    type: constant
+    representation: isotropic
+    value_m2: 1.0e-12
+  porosity:
+    type: constant
+    value: 0.20
+
+phases:
+  wetting:
+    id: water
+    density_kg_m3: 1000.0
+    dynamic_viscosity_pa_s: 1.0e-3
+  nonwetting:
+    id: oil
+    density_kg_m3: 850.0
+    dynamic_viscosity_pa_s: 5.0e-3
+
+relative_permeability:
+  model: power_law
+  saturation:
+    variable: water
+    irreducible_wetting: 0.20
+    residual_nonwetting: 0.20
+    outside_physical_range: clamp
+  wetting:
+    endpoint: 1.0
+    exponent: 2.0
+  nonwetting:
+    endpoint: 1.0
+    exponent: 2.0
+
+initial_conditions:
+  water_saturation: 0.20
+
+flow_effects:
+  gravity_enabled: false
+  capillary_pressure:
+    enabled: false
+
+boundary_conditions:
+  flow:
+    well_injector: {type: pressure, value_pa: 2.0e7}
+    well_producer: {type: pressure, value_pa: 1.0e7}
+    symmetry_path_a: {type: no_flow}
+    symmetry_path_b: {type: no_flow}
+  phase_composition:
+    well_injector: {type: injected_fraction, water_fraction: 1.0}
+    well_producer: {type: advective_outflow}
+    symmetry_path_a: {type: no_flow}
+    symmetry_path_b: {type: no_flow}
+
+time:
+  start_s: 0.0
+  end_s: 3.1536e7
+  initial_step_s: 86400.0
+  adaptive: true
+  target_cfl: 0.8
+  save_every_s: 604800.0
+
+numerics:
+  pressure:
+    linear_solver: auto
+    relative_tolerance: 1.0e-10
+    absolute_tolerance: 1.0e-12
+    max_iterations: 2000
+    nonorthogonal_corrections: 2
+  transport:
+    coupling: impes
+    fractional_flow_scheme: upwind
+    enforce_saturation_bounds: true
+    saturation_tolerance: 1.0e-10
+
+output:
+  store_cell_velocity: true
+  checkpoint_every_steps: 20
+  compression: gzip

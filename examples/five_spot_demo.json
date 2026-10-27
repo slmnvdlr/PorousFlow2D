@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "project": {"name": "five_spot_demo", "unit_system": "SI"},
+  "formulation": "hydrodynamic_finite_wells",
+  "geometry": {
+    "type": "five_spot_cell",
+    "size_m": [100.0, 100.0],
+    "thickness_m": 10.0,
+    "wells": [
+      {"id": "injector", "corner": "bottom_left", "radius_m": 0.1},
+      {"id": "producer", "corner": "top_right", "radius_m": 0.1}
+    ]
+  },
+  "mesh": {
+    "generator": "point_source_isobars",
+    "cells": {"along_streamline": 24, "across_streamlines": 20},
+    "pilot_cells": {"along_streamline": 16, "across_streamlines": 12},
+    "pressure_bias": 1.0,
+    "max_trace_steps": 12000,
+    "streamline_edge_fraction": 0.4,
+    "minimum_cell_angle_deg": 2.0
+  },
+  "medium": {
+    "permeability": {"type": "constant", "representation": "isotropic", "value_m2": 1e-12},
+    "porosity": {"type": "constant", "value": 0.2}
+  },
+  "phases": {
+    "wetting": {"id": "water", "density_kg_m3": 1000.0, "dynamic_viscosity_pa_s": 0.001},
+    "nonwetting": {"id": "oil", "density_kg_m3": 800.0, "dynamic_viscosity_pa_s": 0.005}
+  },
+  "relative_permeability": {
+    "model": "power_law",
+    "saturation": {"variable": "water", "irreducible_wetting": 0.2, "residual_nonwetting": 0.2, "outside_physical_range": "clamp"},
+    "wetting": {"endpoint": 1.0, "exponent": 2.0},
+    "nonwetting": {"endpoint": 1.0, "exponent": 2.0}
+  },
+  "initial_conditions": {"water_saturation": 0.2},
+  "boundary_conditions": {
+    "flow": {
+      "well_injector": {"type": "pressure", "value_pa": 20000000.0},
+      "well_producer": {"type": "pressure", "value_pa": 10000000.0},
+      "symmetry_path_a": {"type": "no_flow"},
+      "symmetry_path_b": {"type": "no_flow"}
+    },
+    "phase_composition": {
+      "well_injector": {"type": "injected_fraction", "water_fraction": 1.0},
+      "well_producer": {"type": "advective_outflow"},
+      "symmetry_path_a": {"type": "no_flow"},
+      "symmetry_path_b": {"type": "no_flow"}
+    }
+  },
+  "time": {"start_s": 0.0, "end_s": 3600.0, "initial_step_s": 60.0, "adaptive": true, "target_cfl": 0.5, "save_every_s": 300.0},
+  "numerics": {
+    "pressure": {"relative_tolerance": 1e-9, "absolute_tolerance": 1e-12, "max_iterations": 4000},
+    "transport": {"scheme": "implicit", "coupling": "sequential_implicit", "time_discretization": "backward_euler", "fractional_flow_scheme": "upwind", "enforce_saturation_bounds": true, "saturation_tolerance": 1e-10, "relative_tolerance": 1e-8, "max_iterations": 20, "max_saturation_change": 1.0}
+  },
+  "output": {"store_cell_velocity": true, "compression": "gzip"}
+}

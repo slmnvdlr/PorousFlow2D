@@ -1,0 +1,31 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+build/
+dist/
+release/
+results/
+outputs/
+
+# Simulation output
+*.npz
+*.h5
+*.hdf5
+*.wells.csv
+*.wells.xlsx
+*.summary.json
+
+# LaTeX build products
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
