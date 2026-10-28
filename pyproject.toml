@@ -14,7 +14,7 @@ dependencies = ["numpy>=1.26", "scipy>=1.12", "pyamg>=5.3", "XlsxWriter>=3.2"]
 yaml = ["PyYAML>=6.0"]
 hdf5 = ["h5py>=3.10"]
 dev = ["pytest>=8.0"]
-distribution = ["Nuitka>=2.8"]
+distribution = ["PyInstaller>=6.16,<7"]
 jit = ["numba>=0.61"]
 
 [project.scripts]

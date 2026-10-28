@@ -13,11 +13,15 @@ $PythonPrefix = @()
 $PyLauncher = Get-Command py -ErrorAction SilentlyContinue
 if ($null -ne $PyLauncher) {
     foreach ($Version in @("-3.12", "-3.13", "-3.11")) {
-        & $PyLauncher.Source $Version -c "import sys; assert (3, 11) <= sys.version_info < (3, 14)" 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            $PythonExecutable = $PyLauncher.Source
-            $PythonPrefix = @($Version)
-            break
+        try {
+            & $PyLauncher.Source $Version -c "import sys; assert (3, 11) <= sys.version_info < (3, 14)" 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                $PythonExecutable = $PyLauncher.Source
+                $PythonPrefix = @($Version)
+                break
+            }
+        } catch {
+            # Continue with the next registered version or a direct python.exe.
         }
     }
 }
@@ -42,34 +46,38 @@ if ($null -eq $PythonExecutable) {
     throw "Python 3.11, 3.12, or 3.13 is required. Python 3.12 is recommended because PyAMG and Numba do not yet provide all required wheels for Python 3.14."
 }
 
-& $PythonExecutable @PythonPrefix -c "import nuitka" 2>$null
+& $PythonExecutable @PythonPrefix -c "import PyInstaller" 2>$null
 if ($LASTEXITCODE -ne 0) {
-    throw 'Nuitka is not installed. Run: python -m pip install -e ".[distribution]"'
+    throw 'PyInstaller is not installed. Run: python -m pip install -e ".[distribution]"'
 }
 
 New-Item -ItemType Directory -Force -Path $OutputRoot | Out-Null
 $env:PYTHONPATH = Join-Path $ProjectRoot "src"
 
-$Mode = if ($OneFile) { "onefile" } else { "standalone" }
+$Mode = if ($OneFile) { "onefile" } else { "onedir" }
+$BuildRoot = Join-Path $ProjectRoot "build\pyinstaller"
+$SpecRoot = Join-Path $BuildRoot "spec"
+New-Item -ItemType Directory -Force -Path $SpecRoot | Out-Null
+
 $Arguments = @(
-    "-m", "nuitka",
-    "--mode=$Mode",
-    "--enable-plugin=tk-inter",
-    "--module-parameter=numba-disable-jit=no",
-    "--windows-console-mode=disable",
-    "--output-dir=$OutputRoot",
-    "--output-filename=PorousFlow2D.exe",
-    "--include-package=porous_fvm",
-    "--include-package=pyamg",
-    "--include-package=numba",
-    "--include-package=llvmlite",
-    "--nofollow-import-to=numba.tests",
-    "--nofollow-import-to=llvmlite.tests",
-    "--include-package=xlsxwriter",
-    "--product-name=PorousFlow 2D",
-    "--file-description=PorousFlow 2D simulator",
-    "--file-version=0.1.0.0",
-    "--product-version=0.1.0.0",
+    "-m", "PyInstaller",
+    "--noconfirm",
+    "--clean",
+    "--$Mode",
+    "--windowed",
+    "--name", "PorousFlow2D",
+    "--distpath", $OutputRoot,
+    "--workpath", $BuildRoot,
+    "--specpath", $SpecRoot,
+    "--paths", (Join-Path $ProjectRoot "src"),
+    "--hidden-import", "numba",
+    "--hidden-import", "llvmlite",
+    "--hidden-import", "pyamg",
+    "--hidden-import", "xlsxwriter",
+    "--exclude-module", "numba.tests",
+    "--exclude-module", "numba.cuda.tests",
+    "--exclude-module", "llvmlite.tests",
+    "--exclude-module", "pyamg.tests",
     $Launcher
 )
 
@@ -82,11 +90,9 @@ if ($LASTEXITCODE -ne 0) {
 if ($OneFile) {
     Write-Host "Done. Distribute release\PorousFlow2D.exe."
 } else {
-    $Distribution = Get-ChildItem $OutputRoot -Directory -Filter "*.dist" |
-        Sort-Object LastWriteTime -Descending |
-        Select-Object -First 1
-    if ($null -eq $Distribution) {
-        throw "Nuitka finished successfully, but no *.dist directory was found."
+    $Distribution = Join-Path $OutputRoot "PorousFlow2D"
+    if (-not (Test-Path -LiteralPath $Distribution -PathType Container)) {
+        throw "PyInstaller finished successfully, but the release directory was not found."
     }
-    Write-Host "Done. Distribute the complete directory: $($Distribution.FullName)"
+    Write-Host "Done. Distribute the complete directory: $Distribution"
 }
